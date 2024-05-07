@@ -1,4 +1,4 @@
-# Config
+# Setup
 
 - Copy the example folder
 - Replace the images with img tag-compatible images
