@@ -1,4 +1,5 @@
-/codes
-!/codes/index.php
-!/codes/example
-!/codes/example/*
+/codes/*
+!codes/
+!codes/index.php
+!codes/example
+!codes/example/*
