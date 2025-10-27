@@ -1,4 +1,13 @@
 <?php
+// Set security headers
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('X-XSS-Protection: 1; mode=block');
+header('Content-Security-Policy: default-src \'self\'; img-src \'self\'; style-src \'unsafe-inline\' \'self\'');
+
+// Define debug variable
+$debug = false; // Set to true only in development
+
 if (!isset($_GET["code"])) {
   echo "no code specified<br>";
   if ($debug) {
@@ -6,34 +15,51 @@ if (!isset($_GET["code"])) {
     foreach ($dirs as $dir) {
       $dirparts = explode("/", $dir);
       $dirname = $dirparts[1];
-      echo "<a href='" . $dir . "'>" . $dirname . "</a><br>";
+      echo "<a href='" . htmlspecialchars($dir, ENT_QUOTES, 'UTF-8') . "'>" . htmlspecialchars($dirname, ENT_QUOTES, 'UTF-8') . "</a><br>";
     }
   }
   die();
 }
 
-$dirname = $_GET["code"];
-$file_name = preg_replace( '/[^a-zA-Z0-9]+/', '-', $dirname );
-$dir = "codes/" . $_GET["code"] . "/";
+// Validate and sanitize the code parameter
+$code = $_GET["code"] ?? '';
+if (!preg_match('/^[a-zA-Z0-9_-]+$/', $code)) {
+    die("Invalid code format");
+}
+
+// Use the sanitized value
+$dir = "codes/" . $code . "/";
+
+// Additional check: ensure the resolved path is within codes directory
+$realPath = realpath($dir);
+$codesPath = realpath("codes/");
+if (!$realPath || !str_starts_with($realPath, $codesPath)) {
+    die("Access denied");
+}
 
 $codeFile = $dir . "code.json";
 if (!file_exists($codeFile)) {
-	die("no code data at: " .$codeFile);
+	die("Code not found");
 }
 
 $codeData = file_get_contents($codeFile);
 $codeObj = json_decode($codeData);
-if (!isset($codeObj)) {
-	die("bad code data: ". $codeData);
+if (!isset($codeObj) || !is_object($codeObj)) {
+	die("Invalid code data format");
+}
+
+// Validate required fields
+if (!isset($codeObj->CodeName) || !isset($codeObj->CodeImage) || !isset($codeObj->CodeCaption) || !isset($codeObj->CodeIcon)) {
+	die("Missing required code data fields");
 }
 ?>
 <html>
 <head>
-<title><?php echo $codeObj->CodeName; ?></title>
+<title><?php echo htmlspecialchars($codeObj->CodeName, ENT_QUOTES, 'UTF-8'); ?></title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="apple-touch-icon" href="<?php echo $dir.$codeObj->CodeIcon; ?>">
-<link rel="apple-touch-startup-image" href="<?php echo $dir.$codeObj->CodeIcon; ?>">
-<meta name="apple-mobile-web-app-title" content="<?php echo $codeObj->CodeName; ?>">
+<link rel="apple-touch-icon" href="<?php echo htmlspecialchars($dir.$codeObj->CodeIcon, ENT_QUOTES, 'UTF-8'); ?>">
+<link rel="apple-touch-startup-image" href="<?php echo htmlspecialchars($dir.$codeObj->CodeIcon, ENT_QUOTES, 'UTF-8'); ?>">
+<meta name="apple-mobile-web-app-title" content="<?php echo htmlspecialchars($codeObj->CodeName, ENT_QUOTES, 'UTF-8'); ?>">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <style>
@@ -83,10 +109,10 @@ p, figcaption {
 </head>
 <body>
 <p style="margin-top:20px;font-size:1.5em">
-<img src="<?php echo $dir.$codeObj->CodeIcon; ?>" width="100" style="width:100px" class="iconimg"><br>
-<?php echo $codeObj->CodeName; ?>
+<img src="<?php echo htmlspecialchars($dir.$codeObj->CodeIcon, ENT_QUOTES, 'UTF-8'); ?>" width="100" style="width:100px" class="iconimg"><br>
+<?php echo htmlspecialchars($codeObj->CodeName, ENT_QUOTES, 'UTF-8'); ?>
 </p>
-<img src="<?php echo $dir.$codeObj->CodeImage; ?>" class="scannableimg" border=0></a>
-<figcaption><?php echo $codeObj->CodeCaption; ?></figcaption>
+<img src="<?php echo htmlspecialchars($dir.$codeObj->CodeImage, ENT_QUOTES, 'UTF-8'); ?>" class="scannableimg" border=0>
+<figcaption><?php echo htmlspecialchars($codeObj->CodeCaption, ENT_QUOTES, 'UTF-8'); ?></figcaption>
 </body>
 </html>
